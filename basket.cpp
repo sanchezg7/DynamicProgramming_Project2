@@ -22,8 +22,8 @@ typedef struct configuration{
 	int result; //holds the computed number of combinations for this configuration
 } configuration;
 
-int basket(bool** cup, const int numBalls, int numCups, const int sizeCup);
-void printCups(bool** mCup, int sizeOfArray, int sizeCup);
+int basket(int* cup, const int numBalls, const int numCups, const int sizeCup);
+void printCups(int* mCup, int sizeOfArray);
 
 //will hold all the instances of each configuration
 	vector<configuration> memoized;
@@ -60,22 +60,17 @@ int main(){
 		int b = 0, n = 0, k = 0;
 		inFile >> b >> n >> k;
 		cout << "numBalls[b]: " << b << " numCups[n]: " << n << " sizeCup[k]: " << k << endl;
-		bool** cup  = new bool*[n]; //allocate number of cups
-		for(int j = 0; j<n; ++j)
-		{
-			cup[j] = new bool[k];
-			for(int y = 0; y < k; ++y){
-				cup[j][y] = false; // populate the cups as EMPTY (false)
-			}
-		}
+		int* cup = new int[n]; //initializes each integer to 0 by default
 
-//		int startIndx = 0, stopIndx = n;
-//		printCups(&cup[startIndx], stopIndx - startIndx, k); //(array, sizeOfArray, sizeCup)
-		basket(cup, b, n, k);
+		//int startIndx = 0, stopIndx = n;
+		//printCups(&cup[startIndx], stopIndx - startIndx, k); //(array, sizeOfArray, sizeCup)
+		numCombinations = basket(cup, b, n, k);
+		//numCombinations = basket(cup, 3, 3, 2);
 		//function call here
 
 		//WRITE to File -  result of instance here
-		//outFile << "PAYLOAD " << i << endl;
+		outFile << "Itr: " << i << " " << numCombinations << endl;
+		cout << "combos: " << numCombinations << endl;
 		cout << endl;
 	}
 
@@ -91,7 +86,7 @@ int findSolution(const int numBalls, const int numCups, const int sizeCup){
 	//vector<configuration> memoized is GLOBAL here
 
 	//linear search
-	for(int i = 0; i < memoized.size(); ++i){
+	for(unsigned int i = 0; i < memoized.size(); ++i){
 		if(memoized[i].b == numBalls && memoized[i].n == numCups && memoized[i].k == sizeCup){
 			cout << "Found: " << memoized[i].b << " " << memoized[i].n << " " << memoized[i].k << endl;
 			return memoized[i].result;
@@ -99,63 +94,81 @@ int findSolution(const int numBalls, const int numCups, const int sizeCup){
 	}
 	cout << "No solution found for " << numBalls << " " << numCups << " " << sizeCup << endl;
 
-	return -1;
+	return 0;
 }
 
 //b = number of BALLS
 //n = number of CUPS
 //k = size of CUP
-int basket(bool** cup, const int numBalls, int numCups, const int sizeCup){
+int basket(int* cup, const int numBalls, const int numCups, const int sizeCup){
 	//pass by value
-	int tempNumBalls = numBalls;
-	int mResult = -1; //holds the current result
-	mResult = findSolution(numBalls, numCups, sizeCup);//FIRST iterate through Memoization vector to find if a solution exists and return that value
-	if(mResult != -1){
+
+	unsigned int ballsAdded = 0;
+	unsigned int numCupsLeft = numCups - 1; //not including the current cup
+	int mResult = 0; //holds the current result
+	//mResult = findSolution(numBalls, numCups, sizeCup);//FIRST iterate through Memoization vector to find if a solution exists and return that value
+	if(mResult != 0){
 		return mResult;
 	}
 
-	if(numCups == 1){ //only one cup/configuration possible
+	//base case - HERE
+	if(numBalls == 0 || (numCups == 1 && numBalls < sizeCup)){
+		cout << "Base Case Here! Possible Configuration, numBalls is 0 OR numCups is 1" << endl;
 		return 1;
 	}
 
-	//look at the array of cups
-	//start at cup 0 (to n)
-	//	fill each cup until it is full (true, if filled) then move onto the next cup
-	for(int i = 0; i < numCups; ++i)
-	{
-		for (int j = 0; j < sizeCup; ++j)
-		{
-			if(tempNumBalls == 0)
-			{
-				break; //no more balls left
+	int slotsLeft = numCupsLeft * sizeCup;
+	int ballsLeft;
+
+	while(*cup  < sizeCup){ //cup can fit at least one more ball
+
+		ballsLeft = numBalls - ballsAdded;
+
+		if(numCups > 1){ //more than a cup, determine range of slots available
+			if(ballsLeft <= slotsLeft){ //will the subsequent(s) cup fit the remaining balls, in this configuration?
+				//we can fit the balls in subsequent calls
+				cout << "numCups left: " << numCupsLeft
+						<< ", (slots) left: " << slotsLeft
+						<< ", numBalls: " << numBalls
+						<< ", balls used: " << ballsAdded
+						<< ", balls left: " << ballsLeft
+
+						<< "\nThe balls will fit in subsequent calls." << endl;
+
+				//add the ball to the current cup/slot and then make recursive call
+				*cup = ballsAdded;
+				printCups(cup, numCups);
+				// recursive call here
+				mResult += basket(++cup, ballsLeft, numCupsLeft, sizeCup);
+
+				++ballsAdded;
+
+			}else{
+				cout << "Balls will not fit in subsequent calls with this configuration."
+						<< " One more ball added, trying again. " << endl;
+				++ballsAdded;
+				*cup = ballsAdded; //add the ball to the current cup, since it won't fit later on
+
 			}
-			cup[i][j] = true;
-			--tempNumBalls;
+		}else{
+			//add to the final cup and break
+			*cup = ballsLeft;
+			break;
 		}
 	}
 
-	printCups(cup, numCups, sizeCup);
-	//	if there are no more balls, this configuration is done do and do recursive call
-	//	recursive call on cups[i to n] with tempB balls
-	//	if cups is only one, return a ONE
-	//
+	cout << "mResult: " << mResult << endl;
 
-	return 0;
-	//return sum + 1;
+	return mResult;
+
 
 }
 
-void printCups(bool** mCup, int sizeOfArray, int sizeCup){
-	for(int j = 0; j < sizeOfArray; ++j){
-		cout << "cup " << j;
-		for(int y = 0; y < sizeCup; ++y){
-			cout << "[";
-			if(mCup[j][y] == true){
-				cout << "o]";
-			} else{
-				cout << " ]";
-			}
-		}
-		cout <<endl;
+void printCups(int* mCup, int sizeOfArray)
+{
+	for(int j = 0; j < sizeOfArray; ++j)
+	{
+		cout << "cup" << j<< ": [" << mCup[j] << "] ";
 	}
+	cout << endl;
 }
