@@ -70,11 +70,9 @@ int main(){
 
 		//WRITE to File -  result of instance here
 		outFile << "Itr: " << i << " " << numCombinations << endl;
-		cout << "combos: " << numCombinations << endl;
+		cout << "Itr: " << numCombinations << endl;
 		cout << endl;
 	}
-
-	//cout << numInstances;
 
 	inFile.close();
 	outFile.close();
@@ -101,74 +99,83 @@ int findSolution(const int numBalls, const int numCups, const int sizeCup){
 //n = number of CUPS
 //k = size of CUP
 int basket(int* cup, const int numBalls, const int numCups, const int sizeCup){
-	//pass by value
+	//integer Array pass by REFERENCE
+	*cup = 0; //ensure that the current cup is set to zero for evaluating configurations
 
 	unsigned int ballsAdded = 0;
+	int ballsLeft = numBalls - ballsAdded;
 	unsigned int numCupsLeft = numCups - 1; //not including the current cup
+	int slotsLeft = numCupsLeft * sizeCup;
 	int mResult = 0; //holds the current result
+
 	//mResult = findSolution(numBalls, numCups, sizeCup);//FIRST iterate through Memoization vector to find if a solution exists and return that value
 	if(mResult != 0){
 		return mResult;
 	}
 
 	//base case - HERE
-	if(numBalls == 0 || (numCups == 1 && numBalls < sizeCup)){
-		cout << "Base Case Here! Possible Configuration, numBalls is 0 OR numCups is 1" << endl;
+	if(numBalls == 0 || (numCupsLeft == 0 && numBalls <= sizeCup)){
+		//cout << "Base Case. ++1" << endl;
 		return 1;
 	}
 
-	int slotsLeft = numCupsLeft * sizeCup;
-	int ballsLeft;
+	while(*cup < sizeCup){ //while the cup isn't full
 
-	while(*cup  < sizeCup){ //cup can fit at least one more ball
-
+		//determine the amount of balls left for subsequent cups
 		ballsLeft = numBalls - ballsAdded;
 
-		if(numCups > 1){ //more than a cup, determine range of slots available
-			if(ballsLeft <= slotsLeft){ //will the subsequent(s) cup fit the remaining balls, in this configuration?
+		if(numCups > 1) //more than a cup, determine range of slots available
+		{
+			if(ballsLeft <= slotsLeft) //will the subsequent cups fit the remaining balls, in this configuration?
+			{
 				//we can fit the balls in subsequent calls
-				cout << "numCups left: " << numCupsLeft
-						<< ", (slots) left: " << slotsLeft
-						<< ", numBalls: " << numBalls
-						<< ", balls used: " << ballsAdded
-						<< ", balls left: " << ballsLeft
-
-						<< "\nThe balls will fit in subsequent calls." << endl;
+//				cout << "numCups left: " << numCupsLeft
+//						<< ", (slots) left: " << slotsLeft
+//						<< ", numBalls: " << numBalls
+//						<< ", balls used: " << ballsAdded
+//						<< ", balls left: " << ballsLeft
+//
+//						<< "\nThe balls will fit in subsequent calls." << endl;
 
 				//add the ball to the current cup/slot and then make recursive call
 				*cup = ballsAdded;
-				printCups(cup, numCups);
-				// recursive call here
-				mResult += basket(++cup, ballsLeft, numCupsLeft, sizeCup);
+				//printCups(cup, numCups);
 
-				++ballsAdded;
+				mResult += basket(++cup, ballsLeft, numCupsLeft, sizeCup); //RECURSION
+
+				//after recursive tree completes!
+				--cup; //Change scope of current cup
+
+				//prevent cup overflow and prevent imaginary balls
+				if(*cup < sizeCup && ballsLeft != 0){
+					++ballsAdded;
+				}else{
+					//cup is full, check if we have a cup left, meaning the possible combos is only one and has already been determined
+					if(ballsLeft < slotsLeft){
+						//cout << "mResult: " << mResult << endl;
+						return mResult; //traversal done
+					}else{
+						mResult += basket(++cup, ballsLeft, numCupsLeft, sizeCup); //keep going down the tree of cups
+					}
+				}
 
 			}else{
-				cout << "Balls will not fit in subsequent calls with this configuration."
-						<< " One more ball added, trying again. " << endl;
+//				cout << "Balls will not fit in subsequent calls with this configuration."
+//						<< " One more ball added, trying again. " << endl;
 				++ballsAdded;
 				*cup = ballsAdded; //add the ball to the current cup, since it won't fit later on
-
 			}
-		}else{
-			//add to the final cup and break
-			*cup = ballsLeft;
-			break;
 		}
 	}
 
-	cout << "mResult: " << mResult << endl;
-
 	return mResult;
-
-
 }
 
 void printCups(int* mCup, int sizeOfArray)
 {
 	for(int j = 0; j < sizeOfArray; ++j)
 	{
-		cout << "cup" << j<< ": [" << mCup[j] << "] ";
+		cout << j<< ": [" << mCup[j] << "] ";
 	}
 	cout << endl;
 }
